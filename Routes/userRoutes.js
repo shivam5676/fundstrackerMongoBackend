@@ -1,5 +1,6 @@
 const express = require("express");
 const signupTable = require("../models/signup");
+const expense = require("../models/expense");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 router.post("/login", async (req, res, next) => {
@@ -25,8 +26,7 @@ router.post("/login", async (req, res, next) => {
       if (comparedHashPassword === true) {
         console.log("execute");
         return res.status(200).json({ msg: "Account successfully loggined" });
-      }
-      else {
+      } else {
         return res.status(401).json({ msg: "Incorrect password" });
       }
     } catch (err) {
@@ -79,6 +79,14 @@ router.post("/signup", async (req, res, next) => {
     console.error("Error during account validation:", err);
     res.status(500).json({ msg: "Internal server error" });
   }
+});
+router.post("/addexpense", (req, res, next) => {
+  const item = req.body;
+  expense.create({
+    amount: item.amount,
+    category: item.category,
+    description: item.description,
+  });
 });
 
 module.exports = router;
