@@ -5,4 +5,8 @@ const sequelize=new Sequelize("expense-project","root","(@Shivam",{
 })
 
 
+
 module.exports=sequelize
+
+module.exports=sequelize
+

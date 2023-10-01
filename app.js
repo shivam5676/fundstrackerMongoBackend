@@ -1,6 +1,7 @@
 const express=require("express")
 const userRoutes=require("./Routes/userRoutes")
 const sequelize=require("./util/database")
+
 const users=require("./models/user")
 const Expenses = require("./models/expense");
 
@@ -8,6 +9,11 @@ const cors=require("cors");
 users.hasMany(Expenses)
 Expenses.belongsTo(users)
 const bodyParser=require("body-parser");
+
+
+const db=require("./models/signup")
+const cors=require("cors");
+const bodyParser=require("body-parser")
 
 const app=express();
 
