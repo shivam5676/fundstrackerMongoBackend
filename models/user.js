@@ -20,6 +20,8 @@ const user=db.define("user",{
         type:Sequelize.STRING,
         allowNull:false,
 
-    }
+    },
+    isPremium:Sequelize.STRING
+    
 })
 module.exports=user;

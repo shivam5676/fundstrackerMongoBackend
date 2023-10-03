@@ -4,11 +4,19 @@ const sequelize = require("./util/database");
 
 const users = require("./models/user");
 const Expenses = require("./models/expense");
-
+const bodyParser = require("body-parser");
+const Order = require("./models/order");
+const user = require("./models/user");
 const cors = require("cors");
+
+
+
 users.hasMany(Expenses);
 Expenses.belongsTo(users);
-const bodyParser = require("body-parser");
+
+users.hasMany(Order)
+Order.belongsTo(user)
+
 
 const app = express();
 
@@ -25,4 +33,5 @@ sequelize
   })
   .catch((err) => {
     console.log(err);
+
   });

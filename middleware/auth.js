@@ -10,7 +10,7 @@ const authenticate = async (req, res, next) => {
 
     const result = await UserDb.findByPk(validUser.userId);
     if (result) {
-      req.userId = result.id; //we are saving user instance in req to handle next middleware
+      req.user= result; //we are saving user instance in req to handle that user in  next middleware
       next();
     }
   } catch (err) {

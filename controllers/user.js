@@ -3,7 +3,9 @@ const expense = require("../models/expense");
 
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const controller = require("../controllers/user");
+const RazorPay = require("razorpay");
+const Order = require("../models/order");
+const user = require("../models/user");
 
 function tokenmaker(id, name) {
   console.log(id, name);
@@ -72,6 +74,7 @@ exports.signupController = async (req, res, next) => {
           name: data.name,
           password: encryptedPassword,
           email: data.email,
+          isPremium: "false",
         });
 
         return res.status(200).json({ msg: "Account successfully created" });
@@ -93,14 +96,14 @@ exports.signupController = async (req, res, next) => {
 };
 exports.addExpenseController = (req, res, next) => {
   const item = req.body;
-  console.log("executed")
+  console.log("executed");
   expense
     .create({
       amount: item.amount,
       category: item.category,
       description: item.description,
 
-      userId: req.userId,
+      userId: req.user.id,
     })
     .then((result) => {
       return res.status(200).json({ msg: "data added successfully" });
@@ -114,7 +117,7 @@ exports.getExpenseController = (req, res, next) => {
   expense
     .findAll({
       where: {
-        userId: req.userId,
+        userId: req.user.id,
       },
     })
     .then((result) => {
@@ -133,12 +136,78 @@ exports.deleteExpenseController = async (req, res, next) => {
       where: {
         id: delId,
 
-        userId: req.userId,
+        userId: req.user.id,
       },
     });
     await result.destroy();
     return res.status(200).json({ msg: "data deleted successfully" });
   } catch (err) {
     console.log(err);
+  }
+};
+exports.activateMemberController = async (req, res, next) => {
+  console.log("req successfully recived", req.user);
+  try {
+    const rzr = new RazorPay({
+      key_id: "rzp_test_87n9BwUziKZrYv",
+      key_secret: "VJOq6QhtFJwX0QGCBVy5EYFd",
+    });
+    const amount = 220000;
+
+    rzr.orders.create(
+      { amount: amount, currency: "INR" },
+      async (err, order) => {
+        if (err) {
+          console.log("err", err);
+        }
+
+        await Order.create({
+          orderId: order.id,
+          amount: order.amount,
+          status: "PENDING",
+          userId: req.user.id,
+          paymentId: "false",
+        });
+        return res.status(201).json({ order: order, key_id: rzr.key_id });
+      }
+    );
+  } catch (err) {
+    return res.status(400).json(err);
+  }
+};
+exports.updateMemberController = async (req, res, next) => {
+  const body = req.body;
+
+  try {
+    const item = await Order.findOne({
+      where: {
+        orderId: body.order_id,
+      },
+    });
+
+    const result =  item.update({
+      paymentId: body.payment_id,
+      status: "SUCCESS",
+    });
+
+    const premiumUser = await user.findOne({
+      where: {
+        id: req.user.id,
+      },
+    });
+
+    const result2 = premiumUser.update({
+      isPremium: "true",
+    });
+
+
+    //we can make it faster by using promise all in place of async await cause they both are working independently and they both are returning promises and not using each other data
+    Promise.all([result,result2]).then(()=>{
+     return res.status(201).json({success:true,msg:"transaction successful and user is now pro user"})
+    }).catch((err)=>{
+      throw new Error(err)
+    })
+  } catch (err) {
+   return res.status(403).json({error:err,msg:"something went wrong"})
   }
 };

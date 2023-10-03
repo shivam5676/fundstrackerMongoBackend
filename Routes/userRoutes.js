@@ -14,5 +14,6 @@ router.post(
   authentication,
   controller.deleteExpenseController
 );
-
+router.post("/updateMembership",authentication,controller.updateMemberController)
+router.get("/activateMembership",authentication,controller.activateMemberController)
 module.exports = router;
