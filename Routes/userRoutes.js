@@ -16,4 +16,5 @@ router.post(
 );
 router.post("/updateMembership",authentication,controller.updateMemberController)
 router.get("/activateMembership",authentication,controller.activateMemberController)
+router.get("/leaderboard",authentication,controller.leaderBoardController)
 module.exports = router;

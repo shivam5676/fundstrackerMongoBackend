@@ -38,6 +38,7 @@ exports.loginController = async (req, res, next) => {
         return res.status(200).json({
           msg: "Account successfully loggined",
           token: tokenmaker(savedUser.id, savedUser.name),
+          premium: savedUser.isPremium,
         });
       } else {
         return res.status(401).json({ msg: "Incorrect password" });
@@ -158,17 +159,17 @@ exports.activateMemberController = async (req, res, next) => {
       { amount: amount, currency: "INR" },
       async (err, order) => {
         if (err) {
-          console.log("err", err);
+          throw new Error(err);
+        } else {
+          await Order.create({
+            orderId: order.id,
+            amount: order.amount,
+            status: "PENDING",
+            userId: req.user.id,
+            paymentId: "false",
+          });
+          return res.status(201).json({ order: order, key_id: rzr.key_id });
         }
-
-        await Order.create({
-          orderId: order.id,
-          amount: order.amount,
-          status: "PENDING",
-          userId: req.user.id,
-          paymentId: "false",
-        });
-        return res.status(201).json({ order: order, key_id: rzr.key_id });
       }
     );
   } catch (err) {
@@ -185,7 +186,7 @@ exports.updateMemberController = async (req, res, next) => {
       },
     });
 
-    const result =  item.update({
+    const result = item.update({
       paymentId: body.payment_id,
       status: "SUCCESS",
     });
@@ -200,14 +201,54 @@ exports.updateMemberController = async (req, res, next) => {
       isPremium: "true",
     });
 
-
     //we can make it faster by using promise all in place of async await cause they both are working independently and they both are returning promises and not using each other data
-    Promise.all([result,result2]).then(()=>{
-     return res.status(201).json({success:true,msg:"transaction successful and user is now pro user"})
-    }).catch((err)=>{
-      throw new Error(err)
-    })
+    Promise.all([result, result2])
+      .then((response) => {
+        return res.status(201).json({
+          success: true,
+          msg: "transaction successful and user is now pro user",
+          isPremium: response[1].dataValues.isPremium,
+        });
+      })
+      .catch((err) => {
+        throw new Error(err);
+      });
   } catch (err) {
-   return res.status(403).json({error:err,msg:"something went wrong"})
+    return res.status(403).json({ error: err, msg: "something went wrong" });
+  }
+};
+
+exports.leaderBoardController = async (req, res, next) => {
+  const leaderboardData = {};
+
+  try {
+    
+      const result = await expense.findAll();
+      Object.values(result).forEach((index) => {
+        if (!leaderboardData[index.dataValues.userId]) {
+          leaderboardData[index.dataValues.userId] = {
+            totalExpense: 0,
+            userId: index.dataValues.userId,
+          };
+        }
+        leaderboardData[index.dataValues.userId].totalExpense +=
+          index.dataValues.amount;
+      });
+
+      const promises = Object.values(leaderboardData).map( async (current) => {
+        const searchedUser =await  user.findOne({
+          where: {
+            id: current.userId,
+          },
+        });
+
+        current.userId = searchedUser.dataValues.name;
+       
+      });
+      await Promise.all(promises);//we are promises.all for solving all promise after that we will send response so that our updated data would be send to server
+      res.status(201).json({ leaderboardData });
+   
+  } catch (err) {
+    console.log(err);
   }
 };
