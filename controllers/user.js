@@ -222,32 +222,61 @@ exports.leaderBoardController = async (req, res, next) => {
   const leaderboardData = {};
 
   try {
-    
-      const result = await expense.findAll();
-      Object.values(result).forEach((index) => {
-        if (!leaderboardData[index.dataValues.userId]) {
-          leaderboardData[index.dataValues.userId] = {
-            totalExpense: 0,
-            userId: index.dataValues.userId,
-          };
-        }
-        leaderboardData[index.dataValues.userId].totalExpense +=
-          index.dataValues.amount;
-      });
+    //method 1 optimised start from here 
+    const result = await expense.findAll({
+      include: [
+        {
+          model: user,//we are using include properties for joining two tables and later we will fetch both data
+        },
+      ],
+    });
 
-      const promises = Object.values(leaderboardData).map( async (current) => {
-        const searchedUser =await  user.findOne({
-          where: {
-            id: current.userId,
-          },
-        });
+    result.forEach((expense) => {
+      const userData = expense.user.dataValues; // Access user table data here
+      const expenseData = expense.dataValues; //access expense table data here
 
-        current.userId = searchedUser.dataValues.name;
-       
-      });
-      await Promise.all(promises);//we are promises.all for solving all promise after that we will send response so that our updated data would be send to server
-      res.status(201).json({ leaderboardData });
-   
+      if (!leaderboardData[userData.id]) {
+        leaderboardData[userData.id] = {
+          totalExpense: 0,
+          userId: userData.id,
+          user: userData.name,
+        };
+      }
+      leaderboardData[userData.id].totalExpense += expense.amount;
+    });
+
+    res.status(201).json({ leaderboardData });
+    //method 1 ends here
+
+//method 2 not optimised 
+
+    // const result = await expense.findAll({
+    //   attributes:["userId","amount"]//optimisation we only take two attributes from table cause we want to work with those two only this will optimise code by 60 to 70 %
+    // });
+    // console.log(result)
+    // Object.values(result).forEach((index) => {
+    //   if (!leaderboardData[index.dataValues.userId]) {
+    //     leaderboardData[index.dataValues.userId] = {
+    //       totalExpense: 0,
+    //       userId: index.dataValues.userId,
+    //     };
+    //   }
+    //   leaderboardData[index.dataValues.userId].totalExpense +=
+    //     index.dataValues.amount;
+    // });
+
+    // const promises = Object.values(leaderboardData).map( async (current) => {
+    //   const searchedUser =await  user.findOne({
+    //     where: {
+    //       id: current.userId,
+    //     },
+    //   });
+
+    //   current.userId = searchedUser.dataValues.name;
+
+    // });
+    // await Promise.all(promises);//we are promises.all for solving all promise after that we will send response so that our updated data would be send to server
+    // res.status(201).json({ leaderboardData });
   } catch (err) {
     console.log(err);
   }
