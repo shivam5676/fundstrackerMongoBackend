@@ -1,4 +1,3 @@
-const userDb = require("../models/user");
 const expense = require("../models/expense");
 
 const bcrypt = require("bcrypt");
@@ -16,7 +15,7 @@ function tokenmaker(id, name) {
 exports.loginController = async (req, res, next) => {
   const data = req.body;
   try {
-    const savedUser = await userDb.findOne({
+    const savedUser = await user.findOne({
       where: {
         email: data.email,
       },
@@ -57,7 +56,7 @@ exports.signupController = async (req, res, next) => {
   const data = req.body;
   // Unique account validation by email
   try {
-    const response = await userDb.findAll({
+    const response = await user.findAll({
       where: {
         email: data.email,
       },
@@ -71,11 +70,12 @@ exports.signupController = async (req, res, next) => {
         const encryptedPassword = await bcrypt.hash(data.password, saltrounds);
 
         // If hashing is successful, create the user
-        const signupResponse = await userDb.create({
+        const signupResponse = await user.create({
           name: data.name,
           password: encryptedPassword,
           email: data.email,
           isPremium: "false",
+          totalExpense: 0,
         });
 
         return res.status(200).json({ msg: "Account successfully created" });
@@ -107,7 +107,19 @@ exports.addExpenseController = (req, res, next) => {
       userId: req.user.id,
     })
     .then((result) => {
-      return res.status(200).json({ msg: "data added successfully" });
+      user.findOne({
+        where: {
+          id: req.user.id,
+        },
+      }).then(response=>{
+        console.log(response.totalExpense)
+        response.update({
+          totalExpense:response.totalExpense+item.amount
+        })
+        
+        return res.status(200).json({ msg: "data added successfully" ,response})
+      })
+      
     })
     .catch((err) => {
       console.log(err);
@@ -220,35 +232,53 @@ exports.updateMemberController = async (req, res, next) => {
 
 exports.leaderBoardController = async (req, res, next) => {
   const leaderboardData = {};
-
+  console.log(req.user);
   try {
-    //method 1 optimised start from here 
-    const result = await expense.findAll({
-      include: [
-        {
-          model: user,//we are using include properties for joining two tables and later we will fetch both data
-        },
-      ],
-    });
 
-    result.forEach((expense) => {
-      const userData = expense.user.dataValues; // Access user table data here
-      const expenseData = expense.dataValues; //access expense table data here
 
-      if (!leaderboardData[userData.id]) {
-        leaderboardData[userData.id] = {
-          totalExpense: 0,
-          userId: userData.id,
-          user: userData.name,
+
+const result = await user.findAll();
+
+    Object.values(result).forEach((current) => {
+      console.log(current.dataValues);
+      const index = current.dataValues.id;
+      if (!leaderboardData[index]) {
+        leaderboardData[index] = {
+          userId: current.dataValues.id,
+          user: current.dataValues.name,
+          totalExpense: current.dataValues.totalExpense,
         };
       }
-      leaderboardData[userData.id].totalExpense += expense.amount;
     });
 
     res.status(201).json({ leaderboardData });
-    //method 1 ends here
+    //method 2 optimised start from here
+    // const result = await expense.findAll({
+    //   include: [
+    //     {
+    //       model: user, //we are using include properties for joining two tables and later we will fetch both data
+    //     },
+    //   ],
+    // });
 
-//method 2 not optimised 
+    // result.forEach((expense) => {
+    //   const userData = expense.user.dataValues; // Access user table data here
+    //   const expenseData = expense.dataValues; //access expense table data here
+
+    //   if (!leaderboardData[userData.id]) {
+    //     leaderboardData[userData.id] = {
+    //       totalExpense: 0,
+    //       userId: userData.id,
+    //       user: userData.name,
+    //     };
+    //   }
+    //   leaderboardData[userData.id].totalExpense += expenseData.amount;
+    // });
+
+    // res.status(201).json({ leaderboardData });
+    //method 2 ends here
+
+    //method 3 not optimised
 
     // const result = await expense.findAll({
     //   attributes:["userId","amount"]//optimisation we only take two attributes from table cause we want to work with those two only this will optimise code by 60 to 70 %
