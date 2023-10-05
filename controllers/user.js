@@ -238,7 +238,7 @@ exports.leaderBoardController = async (req, res, next) => {
 
 
 const result = await user.findAll();
-
+//method 1 most optimised method cause we are directly fetching data from only user table 
     Object.values(result).forEach((current) => {
       console.log(current.dataValues);
       const index = current.dataValues.id;
@@ -252,6 +252,8 @@ const result = await user.findAll();
     });
 
     res.status(201).json({ leaderboardData });
+
+    
     //method 2 optimised start from here
     // const result = await expense.findAll({
     //   include: [
