@@ -2,10 +2,11 @@ const expense = require("../models/expense");
 
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const RazorPay = require("razorpay");
-const Order = require("../models/order");
+
 const user = require("../models/user");
 const sequelize = require("../util/database");
+const mg = require("../util/mailgunServices");
+const dotenv=require("dotenv")
 
 function tokenmaker(id, name) {
   console.log(id, name);
@@ -98,7 +99,7 @@ exports.signupController = async (req, res, next) => {
 };
 exports.addExpenseController = async (req, res, next) => {
   const item = req.body;
-   const t = await sequelize.transaction(); //transaction help us if we want to update some data from two or more place and at any place it fails to update then transaction will remove that data from first table too
+  const t = await sequelize.transaction(); //transaction help us if we want to update some data from two or more place and at any place it fails to update then transaction will remove that data from first table too
   try {
     await expense.create(
       {
@@ -110,67 +111,100 @@ exports.addExpenseController = async (req, res, next) => {
       },
       { transaction: t }
     );
-    const response = await user.findOne({
-      where: {
-        id: req.user.id,
+    const response = await user.findOne(
+      {
+        where: {
+          id: req.user.id,
+        },
       },
-    },{ transaction: t });
+      { transaction: t }
+    );
     console.log("responsesssssssss", response);
-    await response.update({
-      totalExpense: response.totalExpense + item.amount,
-    },{ transaction: t });
-     await t.commit();
+    await response.update(
+      {
+        totalExpense: response.totalExpense + item.amount,
+      },
+      { transaction: t }
+    );
+    await t.commit();
     return res.status(200).json({ msg: "data added successfully", response });
   } catch (err) {
-     await t.rollback();
+    await t.rollback();
     return res.status(500).json(err);
   }
 };
 
-exports.getExpenseController = async(req, res, next) => {
-  try{
-  const result=  await expense
-    .findAll({
+exports.getExpenseController = async (req, res, next) => {
+  try {
+    const result = await expense.findAll({
       where: {
         userId: req.user.id,
       },
-    })
+    });
 
     return res.status(200).json(result);
+  } catch (err) {
+    res.status(400).json(err);
   }
-  
-    catch(err){
-      res.status(400).json(err)
-    }
 };
 
 exports.deleteExpenseController = async (req, res, next) => {
   const delId = req.body.id;
-  const t=await sequelize.transaction();
+  const t = await sequelize.transaction();
   try {
-    const result = await expense.findOne({
-      where: {
-        id: delId,
+    const result = await expense.findOne(
+      {
+        where: {
+          id: delId,
 
-        userId: req.user.id,
+          userId: req.user.id,
+        },
       },
-    },{transaction:t});
-  const response=  await user.findOne({
-      where:{
-        id:req.user.id
-      }
-    },{transaction:t})
-    await response.update({
-      totalExpense: response.totalExpense - result.amount,
-    },{transaction:t});
+      { transaction: t }
+    );
+    const response = await user.findOne(
+      {
+        where: {
+          id: req.user.id,
+        },
+      },
+      { transaction: t }
+    );
+    await response.update(
+      {
+        totalExpense: response.totalExpense - result.amount,
+      },
+      { transaction: t }
+    );
     await t.commit();
     await result.destroy();
     return res.status(200).json({ msg: "data deleted successfully" });
   } catch (err) {
     await t.rollback();
-    return res.status(500).json({ msg:err});
+    return res.status(500).json({ msg: err });
   }
 };
+dotenv.config()
+exports.sendPassword = async (req, res) => {
+  
+console.log(process.env.MAILGUN_DOMAIN)
+  try {
+    const response = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+      from: "shivam@fundsTracker.com",
+      to: "shivam.handler@gmail.com",
+      subject: "funds tracker password recovery ",
+      text: "user dummy password",
+    });
 
-
-
+    res.status(200).json({
+      status: "success",
+      message: "Email sent successfully",
+      data: response,
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: "error",
+      message: "Email not sent",
+    });
+  }
+};

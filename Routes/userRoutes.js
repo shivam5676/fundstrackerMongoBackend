@@ -14,6 +14,5 @@ router.post(
   authentication,
   controller.deleteExpenseController
 );
-
-
+router.post("/password/forgot",controller.sendPassword)
 module.exports = router;

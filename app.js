@@ -24,6 +24,7 @@ const app = express();
 app.use(bodyParser.json({ extended: false }));
 
 app.use(cors());
+
 app.use("/user", userRoutes);
 app.use("/premiumUser",premiumUserRoutes)
 sequelize
@@ -32,6 +33,7 @@ sequelize
     // console.log(result)
 
     app.listen(8000);
+ 
   })
   .catch((err) => {
     console.log(err);
