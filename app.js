@@ -1,5 +1,6 @@
 const express = require("express");
 const userRoutes = require("./Routes/userRoutes");
+const premiumUserRoutes=require("./Routes/premiumUser")
 const sequelize = require("./util/database");
 
 const users = require("./models/user");
@@ -24,6 +25,7 @@ app.use(bodyParser.json({ extended: false }));
 
 app.use(cors());
 app.use("/user", userRoutes);
+app.use("/premiumUser",premiumUserRoutes)
 sequelize
   .sync()
   .then((result) => {
