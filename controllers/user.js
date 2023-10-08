@@ -6,7 +6,9 @@ const jwt = require("jsonwebtoken");
 const user = require("../models/user");
 const sequelize = require("../util/database");
 const mg = require("../util/mailgunServices");
-const dotenv=require("dotenv")
+const dotenv = require("dotenv");
+const uuid = require("uuid");
+const forgotPasswordTable = require("../models/forgotPassword");
 
 function tokenmaker(id, name) {
   console.log(id, name);
@@ -184,27 +186,82 @@ exports.deleteExpenseController = async (req, res, next) => {
     return res.status(500).json({ msg: err });
   }
 };
-dotenv.config()
+dotenv.config();
 exports.sendPassword = async (req, res) => {
-  
-console.log(process.env.MAILGUN_DOMAIN)
+  const requestedEmail = req.body.email;
+
   try {
+    const validUser = await user.findOne({
+      where: {
+        email: requestedEmail,
+      },
+    });
+
+    const uuidv4 = uuid.v4();
+    if (!validUser) {
+      res.status(401).json({
+        error: "email id is not present ,enter correct one email id ",
+      });
+    }
+    await forgotPasswordTable.create({
+      uuid: uuidv4,
+      isActive: "True",
+      userId: validUser.dataValues.id,
+    });
+
     const response = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
       from: "shivam@fundsTracker.com",
       to: "shivam.handler@gmail.com",
       subject: "funds tracker password recovery ",
-      text: "user dummy password",
+      text: `hello ${validUser.dataValues.name} ,welcome to funds tracker password recovery system .we have recieved an request for changing Your password ,if you requested for changing password then you can click on this link http://localhost:8000/user/password/resetpassword/${uuidv4}`,
     });
 
     res.status(200).json({
       status: "success",
-      message: "Email sent successfully",
+      message: "Email sent successfully,please check ur inbox",
       data: response,
     });
-  } catch (error) {
+  } catch (err) {
     res.status(400).json({
-      status: "error",
-      message: "Email not sent",
+      msg: "there was an unexpected problem while sending ur request ..try again ",
+      error: err,
     });
   }
+};
+exports.resetPassword = async (req, res, next) => {
+  const Extracteduuid = req.params.uuid;
+  const password = "123456";
+  const confirmPassword = "123456";
+  if (password != confirmPassword) {
+    return res
+      .status(401)
+      .json({ error: "password and confirm password are not same " });
+  }
+
+  const passwordChangeRequest = await forgotPasswordTable.findOne({
+    where: {
+      uuid: Extracteduuid,
+      isActive: "true",
+    },
+  });
+  // console.log(result);
+  if (!passwordChangeRequest)
+    return res.status(402).json({
+      status: "false",
+      message:
+        "there is no active request for changing password found please send request again",
+    });
+  const passwordUpdate = await user.findOne({
+    where: {
+      id: passwordChangeRequest.dataValues.userId,
+    },
+  });
+  const saltrounds = 10;
+  const EncryptedPassword = await bcrypt.hash(password, saltrounds);
+  console.log(EncryptedPassword)
+
+ const changedPassword=await passwordUpdate.update({
+    password:EncryptedPassword
+  })
+  console.log(changedPassword)
 };

@@ -8,6 +8,8 @@ const Expenses = require("./models/expense");
 const bodyParser = require("body-parser");
 const Order = require("./models/order");
 const user = require("./models/user");
+
+const forgotPasswordRequest=require("./models/forgotPassword")
 const cors = require("cors");
 
 
@@ -18,6 +20,8 @@ Expenses.belongsTo(users);
 users.hasMany(Order)
 Order.belongsTo(user)
 
+users.hasMany(forgotPasswordRequest);
+forgotPasswordRequest.belongsTo(users)
 
 const app = express();
 
