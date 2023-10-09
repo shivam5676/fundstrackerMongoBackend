@@ -230,38 +230,47 @@ exports.sendPassword = async (req, res) => {
 };
 exports.resetPassword = async (req, res, next) => {
   const Extracteduuid = req.params.uuid;
-  const password = "123456";
-  const confirmPassword = "123456";
+  const password = "111111";
+  const confirmPassword = "111111";
   if (password != confirmPassword) {
     return res
       .status(401)
       .json({ error: "password and confirm password are not same " });
   }
-
-  const passwordChangeRequest = await forgotPasswordTable.findOne({
-    where: {
-      uuid: Extracteduuid,
-      isActive: "true",
-    },
-  });
-  // console.log(result);
-  if (!passwordChangeRequest)
-    return res.status(402).json({
-      status: "false",
-      message:
-        "there is no active request for changing password found please send request again",
+  try {
+    const passwordChangeRequest = await forgotPasswordTable.findOne({
+      where: {
+        uuid: Extracteduuid,
+        isActive: "true",
+      },
     });
-  const passwordUpdate = await user.findOne({
-    where: {
-      id: passwordChangeRequest.dataValues.userId,
-    },
-  });
-  const saltrounds = 10;
-  const EncryptedPassword = await bcrypt.hash(password, saltrounds);
-  console.log(EncryptedPassword)
+    // console.log(result);
+    if (!passwordChangeRequest)
+      return res.status(402).json({
+        status: "false",
+        message:
+          "there is no active request for changing password found please send request again",
+      });
+    const passwordUpdate = await user.findOne({
+      where: {
+        id: passwordChangeRequest.dataValues.userId,
+      },
+    });
+    const saltrounds = 10;
+    const EncryptedPassword = await bcrypt.hash(password, saltrounds);
 
- const changedPassword=await passwordUpdate.update({
-    password:EncryptedPassword
-  })
-  console.log(changedPassword)
+    const changedPassword = await passwordUpdate.update({
+      password: EncryptedPassword,
+    });
+
+    const updateactive = await passwordChangeRequest.update({
+      isActive: "false",
+    });
+    return res.status(200).json({
+      status: "success",
+      message:"password succeessfully changed"
+    });
+  } catch (err) {
+    return res.status(400).json({ status: "false", error: err });
+  }
 };
