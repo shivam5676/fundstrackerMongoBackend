@@ -6,6 +6,7 @@ const user = require("../models/user");
 const Expenses = require("../models/expense");
 const dotenv = require("dotenv");
 const AWS = require("aws-sdk");
+const downloadtable = require("../models/downloadUrl");
 dotenv.config();
 
 exports.leaderBoardController = async (req, res, next) => {
@@ -162,37 +163,66 @@ exports.updateMemberController = async (req, res, next) => {
 };
 
 function s3upload(filename, data) {
-  const bucketName = "fundtracker";
-  const IAMuserKey = process.env.IAM_ACCESSKEY;
-  const IAMSECRETKEY = process.env.IAM_USER_SECRETKEY;
-  let s3bucket = new AWS.S3({
-    accessKeyId: IAMuserKey,
-    secretAccessKey: IAMSECRETKEY,
-  });
+  return new Promise((resolve, reject) => {
+    const bucketName = "fundtracker";
+    const IAMuserKey = process.env.IAM_ACCESSKEY;
+    const IAMSECRETKEY = process.env.IAM_USER_SECRETKEY;
+    let s3bucket = new AWS.S3({
+      accessKeyId: IAMuserKey,
+      secretAccessKey: IAMSECRETKEY,
+    });
 
-  s3bucket.createBucket(() => {
     var params = {
       Bucket: bucketName,
       Key: filename,
       Body: data,
+      ACL: "public-read",
     };
     s3bucket.upload(params, (err, response) => {
       if (err) {
-        console.log("something went weong", err);
+        console.log(err);
+        reject(err);
       } else {
+        console.log("executed");
         console.log("data", response);
+        resolve(response.Location);
       }
     });
   });
 }
 
 exports.DownloadReport = async (req, res, next) => {
-  const expense = await Expenses.findAll({
-    where: {
-      id: req.user.id,
-    },
-  });
-  const stringifiedExpenses = JSON.stringify(expense);
-  const filename = "Expenses.txt";
-  const fileUrl = s3upload(filename, stringifiedExpenses);
+  try {
+    const expense = await Expenses.findAll({
+      where: {
+        userId: req.user.id,
+      },
+    });
+    const stringifiedExpenses = JSON.stringify(expense);
+    const filename = `Expenses${req.user.id}/${new Date()}`
+    const fileUrl = await s3upload(filename, stringifiedExpenses);
+
+    const savedFile = await downloadtable.create({
+      fileURL: fileUrl,
+      userId: req.user.id,
+    });
+    // console.log(savedFile);
+    return res.status(200).json({ file: fileUrl });
+  } catch (err) {
+    return res.status(400).json({ error: err });
+  }
+};
+
+exports.previousDownloadReport = async (req, res, next) => {
+  console.log("routes activated");
+  try {
+    const previousfile = await downloadtable.findAll({
+      where: {
+        userId: req.user.id,
+      },
+    });
+    return res.status(200).json({ previousfiles: previousfile });
+  } catch (err) {
+    return res.status(401).json({ error: err });
+  }
 };

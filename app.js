@@ -2,7 +2,7 @@ const express = require("express");
 const userRoutes = require("./Routes/userRoutes");
 const premiumUserRoutes=require("./Routes/premiumUser")
 const sequelize = require("./util/database");
-
+const download=require("./models/downloadUrl")
 const users = require("./models/user");
 const Expenses = require("./models/expense");
 const bodyParser = require("body-parser");
@@ -22,6 +22,9 @@ Order.belongsTo(user)
 
 users.hasMany(forgotPasswordRequest);
 forgotPasswordRequest.belongsTo(users)
+
+users.hasMany(download)
+download.belongsTo(users)
 
 const app = express();
 
