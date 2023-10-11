@@ -137,9 +137,9 @@ exports.addExpenseController = async (req, res, next) => {
 };
 
 exports.getExpenseController = async (req, res, next) => {
-  console.log(req.query.pageNo)
+  console.log(req.query.item)
   const pageNo = +req.query.pageNo;
-  const pageSize = 2;
+  const pageSize =+req.query.item;
   let offset = (pageNo - 1) * pageSize; //this will exclude item which is counted in previous page
   //like if page no is 1 then offset will be (1-1=0) ==> 0*10(pagesize is 10)==>item excluded =0
   //in 2 nd page (2-1=1)==>1*10==>10item from starting will be excluded
@@ -160,7 +160,8 @@ exports.getExpenseController = async (req, res, next) => {
       previousPage=false;
     }
 
-    if (result.length < pageSize) {
+    if (result.length < pageSize 
+      ) {
       console.log("length execution")
       nextPage = false;
     }
