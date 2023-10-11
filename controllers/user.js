@@ -137,14 +137,35 @@ exports.addExpenseController = async (req, res, next) => {
 };
 
 exports.getExpenseController = async (req, res, next) => {
+  console.log(req.query.pageNo)
+  const pageNo = +req.query.pageNo;
+  const pageSize = 2;
+  let offset = (pageNo - 1) * pageSize; //this will exclude item which is counted in previous page
+  //like if page no is 1 then offset will be (1-1=0) ==> 0*10(pagesize is 10)==>item excluded =0
+  //in 2 nd page (2-1=1)==>1*10==>10item from starting will be excluded
   try {
     const result = await expense.findAll({
       where: {
         userId: req.user.id,
       },
+      limit: pageSize,
+      offset: offset,
     });
+    console.log("start execution")
+    let nextPage = true;
+   let previousPage=true;
+   let currentPage=pageNo;
+  if(pageNo===1){
+      console.log("page execution")
+      previousPage=false;
+    }
 
-    return res.status(200).json(result);
+    if (result.length < pageSize) {
+      console.log("length execution")
+      nextPage = false;
+    }
+
+    return res.status(200).json({result:result,nextPage:nextPage,currentPage:currentPage,previousPage:previousPage});
   } catch (err) {
     res.status(400).json(err);
   }
@@ -268,7 +289,7 @@ exports.resetPassword = async (req, res, next) => {
     });
     return res.status(200).json({
       status: "success",
-      message:"password succeessfully changed"
+      message: "password succeessfully changed",
     });
   } catch (err) {
     return res.status(400).json({ status: "false", error: err });
