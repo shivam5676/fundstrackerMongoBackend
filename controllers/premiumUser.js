@@ -85,7 +85,7 @@ exports.leaderBoardController = async (req, res, next) => {
     // await Promise.all(promises);//we are promises.all for solving all promise after that we will send response so that our updated data would be send to server
     // res.status(201).json({ leaderboardData });
   } catch (err) {
-    res.status(400).json(err);
+  return  res.status(400).json({message:err});
   }
 };
 
@@ -93,8 +93,8 @@ exports.activateMemberController = async (req, res, next) => {
   console.log("req successfully recived", req.user);
   try {
     const rzr = new RazorPay({
-      key_id: "rzp_test_87n9BwUziKZrYv",
-      key_secret: "VJOq6QhtFJwX0QGCBVy5EYFd",
+      key_id:process.env.RAZORPAY_KEYID,
+      key_secret: process.env.RAZORPAY_KEYSECRET,
     });
     const amount = 220000;
 
@@ -183,8 +183,7 @@ function s3upload(filename, data) {
         console.log(err);
         reject(err);
       } else {
-        console.log("executed");
-        console.log("data", response);
+   
         resolve(response.Location);
       }
     });
@@ -209,7 +208,7 @@ exports.DownloadReport = async (req, res, next) => {
     // console.log(savedFile);
     return res.status(200).json({ file: fileUrl });
   } catch (err) {
-    return res.status(400).json({ error: err });
+    return res.status(400).json({ message: err });
   }
 };
 
@@ -223,6 +222,6 @@ exports.previousDownloadReport = async (req, res, next) => {
     });
     return res.status(200).json({ previousfiles: previousfile });
   } catch (err) {
-    return res.status(401).json({ error: err });
+    return res.status(401).json({ message: err });
   }
 };

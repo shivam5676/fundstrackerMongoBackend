@@ -15,5 +15,5 @@ router.post(
   controller.deleteExpenseController
 );
 router.post("/password/forgot",controller.sendPassword)
-router.get("/password/resetpassword/:uuid",controller.resetPassword)
+router.post("/password/resetpassword",controller.resetPassword)
 module.exports = router;

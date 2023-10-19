@@ -8,11 +8,14 @@ const Expenses = require("./models/expense");
 const bodyParser = require("body-parser");
 const Order = require("./models/order");
 const user = require("./models/user");
+const https=require("https")
 
 const forgotPasswordRequest=require("./models/forgotPassword")
 const cors = require("cors");
+const fs = require("fs");
 
-
+const privatekey=fs.readFileSync("server.key")
+const certificate=fs.readFileSync("server.cert")
 
 users.hasMany(Expenses);
 Expenses.belongsTo(users);
@@ -37,9 +40,12 @@ app.use("/premiumUser",premiumUserRoutes)
 sequelize
   .sync()
   .then((result) => {
-    // console.log(result)
+   
 
-    app.listen(8000);
+    // app.listen(8000);
+   // now we will not use this we will use https server
+
+   https.createServer({key:privatekey,cert:certificate},app).listen(8000)
  
   })
   .catch((err) => {
