@@ -1,12 +1,14 @@
 const Sequelize=require("sequelize")
-const sequelize=new Sequelize("expense-project","root","(@Shivam",{
+const dotenv=require("dotenv")
+dotenv.config();
+const sequelize=new Sequelize(process.env.SCHEMA_NAME,process.env.DBUSER_NAME,process.env.DBUSER_PASSWORD,{
     dialect:"mysql",
-    host:"localhost"
+    host:process.env.HOST_NAME
 })
 
 
 
-module.exports=sequelize
+
 
 module.exports=sequelize
 

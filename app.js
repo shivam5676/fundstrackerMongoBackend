@@ -9,13 +9,15 @@ const bodyParser = require("body-parser");
 const Order = require("./models/order");
 const user = require("./models/user");
 const https=require("https")
-
+const dotenv=require("dotenv")
 const forgotPasswordRequest=require("./models/forgotPassword")
 const cors = require("cors");
 const fs = require("fs");
 
-const privatekey=fs.readFileSync("server.key")
-const certificate=fs.readFileSync("server.cert")
+
+dotenv.config()
+// const privatekey=fs.readFileSync("server.key")
+// const certificate=fs.readFileSync("server.cert")
 
 users.hasMany(Expenses);
 Expenses.belongsTo(users);
@@ -41,11 +43,13 @@ sequelize
   .sync()
   .then((result) => {
    
+console.log(result)
+    app.listen(process.env.PORT);
+  //  now we will not use this we will use https server
 
-    // app.listen(8000);
-   // now we will not use this we will use https server
-
-   https.createServer({key:privatekey,cert:certificate},app).listen(8000)
+  //  https.createServer(app).listen(8000,()=>{
+  //   console.log("app running")
+  //  })
  
   })
   .catch((err) => {

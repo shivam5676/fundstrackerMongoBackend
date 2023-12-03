@@ -85,21 +85,21 @@ exports.leaderBoardController = async (req, res, next) => {
     // await Promise.all(promises);//we are promises.all for solving all promise after that we will send response so that our updated data would be send to server
     // res.status(201).json({ leaderboardData });
   } catch (err) {
-  return  res.status(400).json({message:err});
+    return res.status(400).json({ message: err });
   }
 };
 
 exports.activateMemberController = async (req, res, next) => {
-  console.log("req successfully recived", req.user);
+  console.log("req successfully recieved", req.user);
   try {
     const rzr = new RazorPay({
-      key_id:process.env.RAZORPAY_KEYID,
+      key_id: process.env.RAZORPAY_KEYID,
       key_secret: process.env.RAZORPAY_KEYSECRET,
     });
     const amount = 220000;
 
     rzr.orders.create(
-      { amount: amount, currency: "INR" },
+      { amount: +amount, currency: "INR" },
       async (err, order) => {
         if (err) {
           return res.status(400).json(err);
@@ -122,7 +122,7 @@ exports.activateMemberController = async (req, res, next) => {
 
 exports.updateMemberController = async (req, res, next) => {
   const body = req.body;
-
+console.log("update starting")
   try {
     const item = await Order.findOne({
       where: {
@@ -155,6 +155,7 @@ exports.updateMemberController = async (req, res, next) => {
         });
       })
       .catch((err) => {
+        console.log(err)
         throw new Error(err);
       });
   } catch (err) {
@@ -183,7 +184,6 @@ function s3upload(filename, data) {
         console.log(err);
         reject(err);
       } else {
-   
         resolve(response.Location);
       }
     });
@@ -198,7 +198,7 @@ exports.DownloadReport = async (req, res, next) => {
       },
     });
     const stringifiedExpenses = JSON.stringify(expense);
-    const filename = `Expenses${req.user.id}/${new Date()}`
+    const filename = `Expenses${req.user.id}/${new Date()}`;
     const fileUrl = await s3upload(filename, stringifiedExpenses);
 
     const savedFile = await downloadtable.create({

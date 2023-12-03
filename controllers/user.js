@@ -38,9 +38,9 @@ exports.loginController = async (req, res, next) => {
         data.password,
         savedUser.password
       );
-      console.log("compare", comparedHashPassword);
+     
       if (comparedHashPassword === true) {
-        console.log("execute", savedUser.id, savedUser.name);
+       
         return res.status(200).json({
           message: "Account successfully loggined",
           token: tokenmaker(savedUser.id, savedUser.name),
@@ -157,7 +157,7 @@ exports.addExpenseController = async (req, res, next) => {
       },
       { transaction: t }
     );
-    console.log("responsesssssssss", response);
+  
     await response.update(
       {
         totalExpense: response.totalExpense + item.amount,
@@ -175,7 +175,7 @@ exports.addExpenseController = async (req, res, next) => {
 };
 
 exports.getExpenseController = async (req, res, next) => {
-  console.log(req.query.item);
+console.log(req.user.name)
   const pageNo = req.query.pageNo ? +req.query.pageNo : 1; // Default to page 1 if pageNo is not provided
   const pageSize = req.query.item ? +req.query.item : 10000000; // Default to pageSize 10 if item is not provided
   let offset = (pageNo - 1) * pageSize; //this will exclude item which is counted in previous page
@@ -206,6 +206,7 @@ exports.getExpenseController = async (req, res, next) => {
       nextPage: nextPage,
       currentPage: currentPage,
       previousPage: previousPage,
+      username:req.user.name
     });
   } catch (err) {
     return res.status(400).json({ message: err });

@@ -6,15 +6,16 @@ const authenticate = async (req, res, next) => {
     const token = req.header("authorization");
 
     const validUser = jwt.verify(token, secretkey);
-    console.log(validUser);
+   
 
     const result = await UserDb.findByPk(validUser.userId);
     if (result) {
       req.user= result; //we are saving user instance in req to handle that user in  next middleware
+   
       next();
     }
   } catch (err) {
-    return res.status(400).json({ success: false });
+    return res.status(400).json({ success: false,msg:"we could not verify user" });
   }
 };
 module.exports = authenticate;
