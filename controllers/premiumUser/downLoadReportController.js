@@ -44,9 +44,9 @@ dotenv.config();
 
 
 async function uploadFileToBlob(filename,expenseData) {
+const connectionString =  process.env.CONNECTIONSTRING;
+const containerName ="fundstrackerdownloadurl";
 
-const connectionString =  "DefaultEndpointsProtocol=https;AccountName=csg10032003080ebca0;AccountKey=haGY16niZUQPpi1ieaZ7n+v+TZZvc8IsfTDxD1BLsjwguxSiSYRmfaYPcLNpdI84wDIyPy6407/o+AStn9ruwA==;EndpointSuffix=core.windows.net";
-const containerName = "downloadexpensesurl";
 const blobName = filename;
 
 
@@ -73,6 +73,10 @@ const DownloadReport = async (req, res, next) => {
   console.log("data")
   const toDate=req.query.toDate;
   const fromDate=req.query.fromDate;
+  const data={
+    toDate:toDate,
+    fromDate:fromDate
+  }
   console.log(toDate)
   try {
     const expense = await Expenses.findAll({
@@ -92,9 +96,11 @@ const DownloadReport = async (req, res, next) => {
     const savedFile = await downloadtable.create({
       fileURL: fileUrl,
       userId: req.user.id,
+      toDate:toDate,
+      fromDate:fromDate
     });
     // console.log(savedFile);
-    return res.status(200).json({ file: fileUrl });
+    return res.status(200).json({ file: fileUrl});
   } catch (err) {
     console.log(err)
     return res.status(403).json({ message: err });

@@ -7,6 +7,8 @@ const downloadtable=db.define("downloadURL",{
         autoIncrement:true,
         primaryKey:true
     },
-    fileURL:Sequelize.STRING
+    fileURL:Sequelize.STRING,
+    toDate:Sequelize.STRING,
+    fromDate:Sequelize.STRING
 })
 module.exports=downloadtable
