@@ -9,7 +9,7 @@ const dotenv = require("dotenv");
 
 const cors = require("cors");
 
-const { default: mongoose } = require("mongoose");
+const mongoose= require("mongoose");
 
 dotenv.config();
 console.log(process.env.testing)
@@ -36,11 +36,13 @@ app.use("/premiumUser", premiumUserRoutes);
 mongoose
   .connect(process.env.MONGO_CONNECTIONSTRING)
   .then((result) => {
-    app.listen(process.env.PORT);
+    app.listen(process.env.PORT,()=>{
+       console.log(`"app running",${process.env.PORT}`)
+    });
    
 
     //  https.createServer(app).listen(8000,()=>{
-    //   console.log("app running")
+     
     //  })
   })
   .catch((err) => {
