@@ -6,9 +6,10 @@ const authenticate = async (req, res, next) => {
     const token = req.header("authorization");
 
     const validUser = jwt.verify(token, secretkey);
-   
+ 
 
-    const result = await UserDb.findByPk(validUser.userId);
+    const result = await UserDb.findOne({_id:validUser.userId});
+    console.log(result)
     if (result) {
       req.user= result; //we are saving user instance in req to handle that user in  next middleware
    

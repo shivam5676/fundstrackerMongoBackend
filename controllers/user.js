@@ -1,5 +1,5 @@
 const expense = require("../models/expense");
-
+const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
@@ -9,12 +9,11 @@ const mg = require("../util/mailgunServices");
 const dotenv = require("dotenv");
 const uuid = require("uuid");
 const forgotPasswordTable = require("../models/forgotPassword");
-const { escape } = require("mysql2");
+
 const ses = require("../util/amazonses");
 
 dotenv.config();
 function tokenmaker(id, name) {
-  console.log(id, name);
   const secretkey = process.env.SECRET_KEY;
   return jwt.sign({ userId: id, name: name }, secretkey);
 }
@@ -23,12 +22,10 @@ exports.loginController = async (req, res, next) => {
   const data = req.body;
   try {
     const savedUser = await user.findOne({
-      where: {
-        email: data.email,
-      },
+      email: data.email,
     });
-    console.log(savedUser);
-    if (savedUser === null) {
+
+    if (!savedUser) {
       return res
         .status(404)
         .json({ message: "user does not exist with this email id" });
@@ -38,9 +35,8 @@ exports.loginController = async (req, res, next) => {
         data.password,
         savedUser.password
       );
-     
+
       if (comparedHashPassword === true) {
-       
         return res.status(200).json({
           message: "Account successfully loggined",
           token: tokenmaker(savedUser.id, savedUser.name),
@@ -66,7 +62,7 @@ exports.loginController = async (req, res, next) => {
 
 exports.signupController = async (req, res, next) => {
   const data = req.body;
-  console.log("data", data);
+
   if (data.name.length == 0) {
     return res
       .status(401)
@@ -92,12 +88,11 @@ exports.signupController = async (req, res, next) => {
   }
   // Unique account validation by email
   try {
-    const response = await user.findAll({
-      where: {
-        email: data.email,
-      },
+    const response = await user.findOne({
+      email: data.email,
     });
-    if (response.length === 0) {
+
+    if (!response) {
       const saltrounds = 10;
       try {
         //we using a different try catch block only for getting error related to hasing process
@@ -105,7 +100,7 @@ exports.signupController = async (req, res, next) => {
         const encryptedPassword = await bcrypt.hash(data.password, saltrounds);
 
         // If hashing is successful, create the user
-        const signupResponse = await user.create({
+        const newUser = new user({
           name: data.name,
           password: encryptedPassword,
           email: data.email,
@@ -113,6 +108,7 @@ exports.signupController = async (req, res, next) => {
           totalExpense: 0,
         });
 
+        await newUser.save();
         return res
           .status(200)
           .json({ message: "Account successfully created" });
@@ -137,58 +133,61 @@ exports.signupController = async (req, res, next) => {
 };
 exports.addExpenseController = async (req, res, next) => {
   const item = req.body;
-  const t = await sequelize.transaction(); //transaction help us if we want to update some data from two or more place and at any place it fails to update then transaction will remove that data from first table too
-  try {
-    const createdItem = await expense.create(
-      {
-        amount: item.amount,
-        category: item.category,
-        description: item.description,
+  const session = await mongoose.startSession(); //transaction help us if we want to update some data from two or more place and at any place it fails to update then transaction will remove that data from first table too
 
-        userId: req.user.id,
-      },
-      { transaction: t }
-    );
-    const response = await user.findOne(
-      {
-        where: {
-          id: req.user.id,
+  try {
+    await session.withTransaction(async () => {
+      const createdItem = await expense.create(
+        [
+          {
+            amount: item.amount,
+            category: item.category,
+            description: item.description,
+
+            userId: req.user.id,
+          },
+        ],
+
+        { session: session }
+      );
+
+      const response = await user.findOne(
+        {
+          _id: req.user.id,
         },
-      },
-      { transaction: t }
-    );
-  
-    await response.update(
-      {
-        totalExpense: response.totalExpense + item.amount,
-      },
-      { transaction: t }
-    );
-    await t.commit();
-    return res
-      .status(200)
-      .json({ message: "data added successfully", createdItem });
+        null,
+        { session: session }
+      );
+
+      response.totalExpense += item.amount;
+      await response.save();
+
+      await session.commitTransaction();
+      return res
+        .status(200)
+        .json({ message: "data added successfully", createdItem });
+    });
   } catch (err) {
-    await t.rollback();
+    session.abortTransaction();
+
+    await session.endSession();
     return res.status(500).json(err);
   }
 };
 
 exports.getExpenseController = async (req, res, next) => {
-console.log(req.user.name)
   const pageNo = req.query.pageNo ? +req.query.pageNo : 1; // Default to page 1 if pageNo is not provided
   const pageSize = req.query.item ? +req.query.item : 10000000; // Default to pageSize 10 if item is not provided
   let offset = (pageNo - 1) * pageSize; //this will exclude item which is counted in previous page
   //like if page no is 1 then offset will be (1-1=0) ==> 0*10(pagesize is 10)==>item excluded =0
   //in 2 nd page (2-1=1)==>1*10==>10item from starting will be excluded
   try {
-    const result = await expense.findAll({
-      where: {
+    const result = await expense
+      .find({
         userId: req.user.id,
-      },
-      limit: pageSize,
-      offset: offset,
-    });
+      })
+      .limit(pageSize)
+      .skip(offset);
 
     let nextPage = true;
     let previousPage = true;
@@ -206,7 +205,7 @@ console.log(req.user.name)
       nextPage: nextPage,
       currentPage: currentPage,
       previousPage: previousPage,
-      username:req.user.name
+      username: req.user.name,
     });
   } catch (err) {
     return res.status(400).json({ message: err });
@@ -215,43 +214,46 @@ console.log(req.user.name)
 
 exports.deleteExpenseController = async (req, res, next) => {
   const delId = req.body.id;
-  const t = await sequelize.transaction();
+  console.log(delId);
+  const session = await mongoose.startSession();
   try {
-    const result = await expense.findOne(
-      {
-        where: {
-          id: delId,
+    await session.withTransaction(async () => {
+      const result = await expense.findOne(
+        {
+          _id: delId,
 
           userId: req.user.id,
         },
-      },
-      { transaction: t }
-    );
-    const response = await user.findOne(
-      {
-        where: {
-          id: req.user.id,
+        null,
+        { session: session }
+      );
+
+      const response = await user.findOne(
+        {
+          _id: req.user.id,
         },
-      },
-      { transaction: t }
-    );
-    await response.update(
-      {
-        totalExpense: response.totalExpense - result.amount,
-      },
-      { transaction: t }
-    );
-    await t.commit();
-    await result.destroy();
-    return res.status(200).json({ message: "data deleted successfully" });
+        null,
+        { session: session }
+      );
+
+      response.totalExpense -= result.amount;
+
+      await response.save({ session: session });
+      await result.deleteOne({ _id: delId }).session(session);
+      await session.commitTransaction();
+
+      return res.status(200).json({ message: "data deleted successfully" });
+    });
   } catch (err) {
-    await t.rollback();
+    await session.abortTransaction();
+    await session.endSession();
     return res.status(500).json({ message: err });
   }
 };
 
 exports.sendPassword = async (req, res) => {
   const requestedEmail = req.body.email;
+
   if (requestedEmail.length == 0) {
     return res.status(401).json({
       message: "there is no value you provided in email field..",
@@ -259,11 +261,9 @@ exports.sendPassword = async (req, res) => {
   }
   try {
     const validUser = await user.findOne({
-      where: {
-        email: requestedEmail,
-      },
+      email: requestedEmail,
     });
-    console.log(validUser.email);
+
     const uuidv4 = uuid.v4();
     if (!validUser) {
       return res.status(401).json({
@@ -272,10 +272,10 @@ exports.sendPassword = async (req, res) => {
           "email id is not present in our database, enter correct email id ",
       });
     }
-    await forgotPasswordTable.create({
+    const created = await forgotPasswordTable.create({
       uuid: uuidv4,
       isActive: "True",
-      userId: validUser.dataValues.id,
+      userId: validUser._id,
     });
 
     // const params = {
@@ -307,7 +307,7 @@ exports.sendPassword = async (req, res) => {
       from: "shivam@fundTracker.com",
       to: "shivam.handler@gmail.com",
       subject: "funds tracker password recovery ",
-      text: `hello ${validUser.dataValues.name} ,welcome to funds tracker password recovery system .we have recieved an request for changing Your password ,if you requested for changing password then you can click on this link http://localhost:3000/updatePassword/${uuidv4}`,
+      text: `hello ${validUser.name} ,welcome to funds tracker password recovery system .we have recieved an request for changing Your password ,if you requested for changing password then you can click on this link http://localhost:3000/updatePassword/${uuidv4}`,
     });
 
     return res.status(200).json({
@@ -326,9 +326,15 @@ exports.sendPassword = async (req, res) => {
 };
 exports.resetPassword = async (req, res, next) => {
   const Extracteduuid = req.body.uuid;
-  console.log(req.body);
+
   const password = req.body.password;
   const confirmPassword = req.body.confirmPassword;
+  if (password.length < 6) {
+    return res
+      .status(401)
+      .json({ message: "password should contains 6 or more character " });
+  }
+
   if (password != confirmPassword) {
     return res
       .status(401)
@@ -336,10 +342,8 @@ exports.resetPassword = async (req, res, next) => {
   }
   try {
     const passwordChangeRequest = await forgotPasswordTable.findOne({
-      where: {
-        uuid: Extracteduuid,
-        isActive: "true",
-      },
+      uuid: Extracteduuid,
+      isActive: "True",
     });
 
     if (!passwordChangeRequest)
@@ -349,18 +353,16 @@ exports.resetPassword = async (req, res, next) => {
           "there is no active request for changing password or this link expired ...send request again",
       });
     const passwordUpdate = await user.findOne({
-      where: {
-        id: passwordChangeRequest.dataValues.userId,
-      },
+      id: passwordChangeRequest.userId,
     });
     const saltrounds = 10;
     const EncryptedPassword = await bcrypt.hash(password, saltrounds);
 
-    const changedPassword = await passwordUpdate.update({
+    const changedPassword = await passwordUpdate.updateOne({
       password: EncryptedPassword,
     });
 
-    const updateactive = await passwordChangeRequest.update({
+    const updateactive = await passwordChangeRequest.updateOne({
       isActive: "false",
     });
     return res.status(200).json({

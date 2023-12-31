@@ -79,19 +79,17 @@ const DownloadReport = async (req, res, next) => {
   }
   console.log(toDate)
   try {
-    const expense = await Expenses.findAll({
-      where: {
+    const expense = await Expenses.find({
+    
         userId: req.user.id,
-      },
-      createdAt:{
-        [Op.between]:[new Date(toDate),new Date(fromDate)]
-      }
+     
+     
     });
     const stringifiedExpenses = JSON.stringify(expense);
-    console.log(stringifiedExpenses);
+    
     const filename = `Expenses${req.user.id}/${new Date()}`;
     const fileUrl = await uploadFileToBlob(filename, stringifiedExpenses);
-    console.log(fileUrl);
+   
 
     const savedFile = await downloadtable.create({
       fileURL: fileUrl,
@@ -102,7 +100,7 @@ const DownloadReport = async (req, res, next) => {
     // console.log(savedFile);
     return res.status(200).json({ file: fileUrl});
   } catch (err) {
-    console.log(err)
+    
     return res.status(403).json({ message: err });
   }
 };

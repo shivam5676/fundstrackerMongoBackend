@@ -10,16 +10,17 @@ const leaderBoardController = async (req, res, next) => {
     const leaderboardData = {};
   
     try {
-      const result = await user.findAll();
+      const result = await user.find();
+      // console.log(result)
       //method 1 most optimised method cause we are directly fetching data from only user table
       Object.values(result).forEach((current) => {
-        console.log(current.dataValues);
-        const index = current.dataValues.id;
+  
+        const index = current._id;
         if (!leaderboardData[index]) {
           leaderboardData[index] = {
-            userId: current.dataValues.id,
-            user: current.dataValues.name,
-            totalExpense: current.dataValues.totalExpense,
+            userId: current._id,
+            user: current.name,
+            totalExpense: current.totalExpense,
           };
         }
       });

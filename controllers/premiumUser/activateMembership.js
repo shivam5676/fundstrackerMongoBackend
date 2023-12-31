@@ -10,11 +10,12 @@ dotenv.config();
 
 
 const activateMemberController = async (req, res, next) => {
-    console.log("req successfully recieved", req.user);
+    
     try {
       const rzr = new RazorPay({
-        key_id: process.env.RAZORPAY_KEYID,
-        key_secret: process.env.RAZORPAY_KEYSECRET,
+        key_id:"rzp_test_hQKSaZFRZsnpbi",
+        // process.env.RAZORPAY_KEYID,
+        key_secret:"KUzONiDgBg0qYfOdXCkbfAU2",
       });
       const amount = 220000;
   
@@ -31,6 +32,7 @@ const activateMemberController = async (req, res, next) => {
               userId: req.user.id,
               paymentId: "false",
             });
+           
             return res.status(201).json({ order: order, key_id: rzr.key_id });
           }
         }
