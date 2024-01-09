@@ -45,7 +45,7 @@ dotenv.config();
 
 async function uploadFileToBlob(filename,expenseData) {
 const connectionString =  process.env.CONNECTIONSTRING;
-const containerName ="fundstrackerdownloadurl";
+const containerName =process.env.CONTAINER_NAME;
 
 const blobName = filename;
 

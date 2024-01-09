@@ -13,8 +13,7 @@ const mongoose= require("mongoose");
 
 dotenv.config();
 console.log(process.env.testing)
-// const privatekey=fs.readFileSync("server.key")
-// const certificate=fs.readFileSync("server.cert")
+
 
 
 
@@ -38,6 +37,7 @@ mongoose
   .then((result) => {
     app.listen(process.env.PORT,()=>{
        console.log(`"app running",${process.env.PORT}`)
+       
     });
    
 
