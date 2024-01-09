@@ -29,7 +29,10 @@ app.use(
     optionsSuccessStatus: 204,
   })
 );
-
+app.use("/cron",(req,res,next)=>{
+  res.status(200).json("fundstracker cron job triggered")
+  next()
+})
 app.use("/user", userRoutes);
 app.use("/premiumUser", premiumUserRoutes);
 mongoose
